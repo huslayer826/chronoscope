@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChronoScope | Download for Windows</title>
+    <meta
+      name="description"
+      content="Download ChronoScope, a local-first Windows screen time tracker with per-app and per-website tracking."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0a0b;
+        --panel: #141418;
+        --panel-2: #1d1d23;
+        --text: #f6f7fb;
+        --muted: #a6adbb;
+        --line: #2b2d34;
+        --green: #22c55e;
+        --blue: #3b82f6;
+        --rose: #f43f5e;
+        --amber: #eab308;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 72px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .github {
+        color: var(--muted);
+        font-size: 14px;
+        text-decoration: none;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 0.88fr) minmax(420px, 1.12fr);
+        gap: 56px;
+        align-items: center;
+        min-height: calc(100vh - 72px);
+        padding: 72px 0 88px;
+      }
+
+      h1 {
+        margin: 0 0 18px;
+        font-size: clamp(44px, 8vw, 82px);
+        line-height: 0.95;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 600px;
+        margin: 0 0 32px;
+        color: var(--muted);
+        font-size: 19px;
+        line-height: 1.6;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--green);
+        color: #041108;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        background: transparent;
+        color: var(--text);
+      }
+
+      .screenshot {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 24px 80px rgb(0 0 0 / 0.4);
+      }
+
+      .chrome {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        height: 42px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        background: #101014;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        min-height: 430px;
+      }
+
+      .nav {
+        padding: 20px;
+        border-right: 1px solid var(--line);
+        background: #111116;
+      }
+
+      .nav-line,
+      .metric,
+      .bar,
+      .row {
+        border-radius: 6px;
+        background: var(--panel-2);
+      }
+
+      .nav-line {
+        height: 34px;
+        margin-bottom: 12px;
+      }
+
+      .content {
+        padding: 22px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .metric {
+        min-height: 88px;
+        padding: 14px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 20px;
+        font-size: 24px;
+      }
+
+      .chart {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        align-items: end;
+        gap: 8px;
+        height: 150px;
+        margin-bottom: 20px;
+        padding: 16px;
+        border-radius: 8px;
+        background: #121218;
+      }
+
+      .bar {
+        min-height: 24px;
+        background: linear-gradient(180deg, var(--blue), var(--green));
+      }
+
+      .row {
+        height: 34px;
+        margin-bottom: 10px;
+      }
+
+      section {
+        padding: 76px 0;
+        border-top: 1px solid var(--line);
+      }
+
+      h2 {
+        margin: 0 0 28px;
+        font-size: 32px;
+        letter-spacing: 0;
+      }
+
+      .features,
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+      }
+
+      .feature,
+      .screen {
+        min-height: 150px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .feature h3,
+      .screen h3 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .feature p,
+      .screen p,
+      .extension p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .extension {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+        align-items: center;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 30px 0 46px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .extension {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding-top: 52px;
+        }
+
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+
+        .nav {
+          display: none;
+        }
+
+        .features,
+        .screens {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .shell {
+          width: min(100% - 28px, 1120px);
+        }
+
+        header,
+        footer {
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+        }
+
+        .features,
+        .screens,
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand">ChronoScope</div>
+        <a class="github" href="https://github.com/huslayer826/chronoscope">GitHub</a>
+      </header>
+
+      <main>
+        <div class="hero">
+          <div>
+            <h1>ChronoScope</h1>
+            <p class="lead">
+              A local-first Windows screen time tracker for understanding app
+              usage, website activity, focus patterns, and monthly trends.
+            </p>
+            <div class="actions">
+              <a
+                class="button"
+                href="https://github.com/huslayer826/chronoscope/releases/latest/download/chronoscope_0.1.0_x64-setup.exe"
+              >
+                Download for Windows
+              </a>
+              <a class="button secondary" href="https://github.com/huslayer826/chronoscope/releases/latest">
+                Latest release
+              </a>
+            </div>
+          </div>
+
+          <div class="screenshot" aria-label="ChronoScope dashboard screenshot placeholder">
+            <div class="chrome">
+              <span class="dot" style="background: var(--rose)"></span>
+              <span class="dot" style="background: var(--amber)"></span>
+              <span class="dot" style="background: var(--green)"></span>
+            </div>
+            <div class="dashboard">
+              <div class="nav">
+                <div class="nav-line"></div>
+                <div class="nav-line"></div>
+                <div class="nav-line"></div>
+              </div>
+              <div class="content">
+                <div class="metrics">
+                  <div class="metric">Today<strong>4h 12m</strong></div>
+                  <div class="metric">Focus<strong>68%</strong></div>
+                  <div class="metric">Top App<strong>Code</strong></div>
+                </div>
+                <div class="chart">
+                  <div class="bar" style="height: 35%"></div>
+                  <div class="bar" style="height: 55%"></div>
+                  <div class="bar" style="height: 42%"></div>
+                  <div class="bar" style="height: 75%"></div>
+                  <div class="bar" style="height: 82%"></div>
+                  <div class="bar" style="height: 65%"></div>
+                  <div class="bar" style="height: 48%"></div>
+                  <div class="bar" style="height: 72%"></div>
+                  <div class="bar" style="height: 56%"></div>
+                  <div class="bar" style="height: 40%"></div>
+                  <div class="bar" style="height: 32%"></div>
+                  <div class="bar" style="height: 24%"></div>
+                </div>
+                <div class="row"></div>
+                <div class="row"></div>
+                <div class="row"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section>
+          <h2>Features</h2>
+          <div class="features">
+            <div class="feature">
+              <h3>Per-app tracking</h3>
+              <p>See active time by Windows application and title.</p>
+            </div>
+            <div class="feature">
+              <h3>Per-website tracking</h3>
+              <p>Connect the browser extension for domain-level context.</p>
+            </div>
+            <div class="feature">
+              <h3>Local-first privacy</h3>
+              <p>Tracking data is stored locally in SQLite on your PC.</p>
+            </div>
+            <div class="feature">
+              <h3>Monthly reports</h3>
+              <p>Review trends by day, hour, category, app, and website.</p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>Screenshots</h2>
+          <div class="screens">
+            <div class="screen">
+              <h3>Dashboard</h3>
+              <p>Daily usage and timeline overview placeholder.</p>
+            </div>
+            <div class="screen">
+              <h3>Monthly report</h3>
+              <p>Calendar heatmap and trend analysis placeholder.</p>
+            </div>
+            <div class="screen">
+              <h3>Settings</h3>
+              <p>Tracking, startup, export, and privacy controls placeholder.</p>
+            </div>
+            <div class="screen">
+              <h3>Categories</h3>
+              <p>Editable rules for apps and domains placeholder.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="extension">
+          <div>
+            <h2>Get the browser extension</h2>
+            <p>
+              Browser extensions will publish separately for Chrome Web Store,
+              Edge Add-ons, and Firefox AMO.
+            </p>
+          </div>
+          <div class="actions">
+            <a class="button secondary" href="#">Chrome Web Store</a>
+            <a class="button secondary" href="#">Edge Add-ons</a>
+            <a class="button secondary" href="#">Firefox AMO</a>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>Copyright (c) 2026 Omar Yousef</span>
+        <span>
+          <a href="https://github.com/huslayer826/chronoscope">GitHub</a>
+          ·
+          <a href="../PRIVACY.md">Privacy policy</a>
+        </span>
+      </footer>
+    </div>
+  </body>
+</html>

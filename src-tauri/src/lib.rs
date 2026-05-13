@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod tray;
 mod tracking;
+mod updater;
 mod ws;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -18,7 +19,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .setup(|app| {
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
             tray::setup(app)?;
+            updater::check_on_startup(app.handle().clone());
             let browser_state = ws::server::create_browser_state();
             ws::server::start_server(browser_state);
             tracking::start_polling_loop();

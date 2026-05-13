@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export interface DateRange {
   start_ts: number;
@@ -78,6 +79,11 @@ export interface Settings {
   include_browser_urls: boolean;
   launch_at_login: boolean;
   launch_to_tray: boolean;
+}
+
+export interface UpdateAvailablePayload {
+  version: string;
+  currentVersion: string;
 }
 
 export interface MonthlyReport {
@@ -215,4 +221,12 @@ export function getDatabasePath(): Promise<string> {
 
 export function openDatabaseFolder(): Promise<void> {
   return invoke("open_database_folder");
+}
+
+export function onUpdateAvailable(
+  handler: (payload: UpdateAvailablePayload) => void,
+): Promise<UnlistenFn> {
+  return listen<UpdateAvailablePayload>("update_available", (event) => {
+    handler(event.payload);
+  });
 }

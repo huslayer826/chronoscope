@@ -31,15 +31,57 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "REPLACE_WITH_TAURI_UPDATER_PUBLIC_KEY",
+      "endpoints": [
+        "https://github.com/huslayer826/chronoscope/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi", "nsis"],
+    "createUpdaterArtifacts": true,
+    "publisher": "Omar Yousef",
+    "copyright": "Copyright (c) 2026 Omar Yousef",
+    "category": "Productivity",
+    "shortDescription": "Local-first Windows screen time tracker.",
+    "longDescription": "ChronoScope is a privacy-respecting Windows screen time tracker that records per-app and per-website activity locally on the user's machine.",
+    "licenseFile": "../LICENSE",
+    "homepage": "https://github.com/huslayer826/chronoscope",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
+      "icons/256x256.png",
+      "icons/512x512.png",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "allowDowngrades": false,
+      "digestAlgorithm": "sha256",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "wix": {
+        "language": "en-US",
+        "bannerPath": null,
+        "dialogImagePath": null,
+        "enableElevatedUpdateTask": false
+      },
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "startMenuFolder": "ChronoScope",
+        "installerHooks": "./installer/nsis/hooks.nsh"
+      }
+    }
   }
 }

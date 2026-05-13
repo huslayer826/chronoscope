@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows installers
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Inject updater public key
+        shell: pwsh
+        run: |
+          if ("${{ vars.TAURI_UPDATER_PUBLIC_KEY }}" -eq "") {
+            throw "Set the TAURI_UPDATER_PUBLIC_KEY repository variable before creating a release."
+          }
+
+          $configPath = "src-tauri/tauri.conf.json"
+          (Get-Content $configPath -Raw).Replace("REPLACE_WITH_TAURI_UPDATER_PUBLIC_KEY", "${{ vars.TAURI_UPDATER_PUBLIC_KEY }}") | Set-Content $configPath -Encoding UTF8
+
+      - name: Build Tauri installers
+        run: npm run tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Generate latest.json
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "${{ github.ref_name }}"
+          $repo = "${{ github.repository }}"
+          $exe = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*setup.exe" -Recurse | Select-Object -First 1
+          $msi = Get-ChildItem "src-tauri/target/release/bundle/msi" -Filter "*.msi" -Recurse | Select-Object -First 1
+
+          if (-not $exe) {
+            throw "NSIS setup executable was not found."
+          }
+
+          if (-not $msi) {
+            throw "MSI installer was not found."
+          }
+
+          $sigFile = Get-ChildItem $exe.DirectoryName -Filter "$($exe.Name).sig" | Select-Object -First 1
+          if (-not $sigFile) {
+            throw "Updater signature for $($exe.Name) was not found."
+          }
+
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          $exeAssetName = "chronoscope_${version}_x64-setup.exe"
+          $msiAssetName = "chronoscope_${version}_x64.msi"
+          Copy-Item $exe.FullName "release-assets/$exeAssetName"
+          Copy-Item $sigFile.FullName "release-assets/$exeAssetName.sig"
+          Copy-Item $msi.FullName "release-assets/$msiAssetName"
+
+          $msiSigFile = Get-ChildItem $msi.DirectoryName -Filter "$($msi.Name).sig" | Select-Object -First 1
+          if ($msiSigFile) {
+            Copy-Item $msiSigFile.FullName "release-assets/$msiAssetName.sig"
+          }
+
+          $latest = @{
+            version = $version
+            notes = "See the GitHub release notes for ChronoScope $tag."
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = (Get-Content $sigFile.FullName -Raw).Trim()
+                url = "https://github.com/$repo/releases/download/$tag/$exeAssetName"
+              }
+            }
+          }
+
+          $latest | ConvertTo-Json -Depth 8 | Set-Content release-assets/latest.json -Encoding UTF8
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-assets/*

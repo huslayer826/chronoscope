@@ -2,6 +2,7 @@
   "name": "chronoscope",
   "private": true,
   "version": "0.1.0",
+  "description": "Local-first Windows screen time tracker with per-app and per-website tracking",
   "type": "module",
   "scripts": {
     "dev": "vite",
