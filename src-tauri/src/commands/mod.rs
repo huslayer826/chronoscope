@@ -1,4 +1,4 @@
-use chrono::{Datelike, Local, TimeZone};
+use chrono::{Datelike, Local, Months, NaiveDate, TimeZone};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
@@ -106,6 +106,36 @@ impl Default for Settings {
     }
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct MonthlyReport {
+    pub year: i32,
+    pub month: u32,
+    pub month_name: String,
+    pub days_in_month: u32,
+    pub total_active_seconds: i64,
+    pub daily_average_seconds: i64,
+    pub most_active_day: Option<DayStat>,
+    pub longest_session_seconds: i64,
+    pub unique_apps: i64,
+    pub unique_websites: i64,
+    pub by_category: Vec<CategoryStat>,
+    pub top_apps: Vec<AppStat>,
+    pub top_domains: Vec<DomainStat>,
+    pub by_day: Vec<DayStat>,
+    pub by_hour: [i64; 24],
+    pub comparison: MonthComparison,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MonthComparison {
+    pub previous_total_seconds: i64,
+    pub previous_productive_seconds: i64,
+    pub previous_distracting_seconds: i64,
+    pub current_total_seconds: i64,
+    pub current_productive_seconds: i64,
+    pub current_distracting_seconds: i64,
+}
+
 #[tauri::command]
 pub async fn get_summary(range: DateRange) -> Summary {
     with_connection(|connection| query_summary(connection, range)).unwrap_or_else(Summary::empty)
@@ -114,6 +144,15 @@ pub async fn get_summary(range: DateRange) -> Summary {
 #[tauri::command]
 pub async fn get_today_timeline() -> Vec<TimelineEvent> {
     with_connection(query_today_timeline).unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn get_monthly_report(year: i32, month: u32) -> Result<MonthlyReport, String> {
+    if !(1..=12).contains(&month) {
+        return Err("month must be between 1 and 12".to_string());
+    }
+
+    with_connection_result(|connection| build_monthly_report(connection, year, month))
 }
 
 #[tauri::command]
@@ -523,4 +562,204 @@ fn percent(duration_seconds: i64, total_seconds: i64) -> f64 {
     } else {
         (duration_seconds as f64 / total_seconds as f64) * 100.0
     }
+}
+
+const MONTH_NAMES: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+fn month_name(month: u32) -> String {
+    MONTH_NAMES
+        .get(month.saturating_sub(1) as usize)
+        .copied()
+        .unwrap_or("")
+        .to_string()
+}
+
+fn month_range(year: i32, month: u32) -> rusqlite::Result<DateRange> {
+    let start_date = NaiveDate::from_ymd_opt(year, month, 1).ok_or_else(|| {
+        rusqlite::Error::InvalidParameterName(format!("invalid year/month: {year}/{month}"))
+    })?;
+    let end_date = start_date
+        .checked_add_months(Months::new(1))
+        .ok_or_else(|| {
+            rusqlite::Error::InvalidParameterName(format!("month overflow: {year}/{month}"))
+        })?;
+
+    let start_dt = Local
+        .from_local_datetime(
+            &start_date
+                .and_hms_opt(0, 0, 0)
+                .expect("hms 0,0,0 is always valid"),
+        )
+        .single()
+        .ok_or_else(|| {
+            rusqlite::Error::InvalidParameterName("ambiguous local time at month start".to_string())
+        })?;
+    let end_dt = Local
+        .from_local_datetime(
+            &end_date
+                .and_hms_opt(0, 0, 0)
+                .expect("hms 0,0,0 is always valid"),
+        )
+        .single()
+        .ok_or_else(|| {
+            rusqlite::Error::InvalidParameterName("ambiguous local time at month end".to_string())
+        })?;
+
+    Ok(DateRange {
+        start_ts: start_dt.timestamp(),
+        end_ts: end_dt.timestamp(),
+    })
+}
+
+fn previous_month(year: i32, month: u32) -> (i32, u32) {
+    if month == 1 {
+        (year - 1, 12)
+    } else {
+        (year, month - 1)
+    }
+}
+
+fn days_in_month(year: i32, month: u32) -> u32 {
+    let start = match NaiveDate::from_ymd_opt(year, month, 1) {
+        Some(value) => value,
+        None => return 0,
+    };
+    let next = match start.checked_add_months(Months::new(1)) {
+        Some(value) => value,
+        None => return 0,
+    };
+    next.signed_duration_since(start).num_days() as u32
+}
+
+fn build_monthly_report(
+    connection: &Connection,
+    year: i32,
+    month: u32,
+) -> rusqlite::Result<MonthlyReport> {
+    let range = month_range(year, month)?;
+    let (prev_year, prev_month) = previous_month(year, month);
+    let prev_range = month_range(prev_year, prev_month)?;
+
+    let summary = query_summary(connection, range.clone())?;
+
+    let dim = days_in_month(year, month);
+    let daily_average_seconds = if dim > 0 {
+        summary.total_active_seconds / dim as i64
+    } else {
+        0
+    };
+
+    let most_active_day = summary
+        .by_day
+        .iter()
+        .max_by_key(|day| day.duration_seconds)
+        .cloned();
+
+    let longest_session_seconds = longest_session(connection, &range)?;
+    let unique_apps = unique_app_count(connection, &range)?;
+    let unique_websites = unique_domain_count(connection, &range)?;
+
+    let (current_productive, current_distracting, current_total) =
+        productive_distracting_total(connection, &range)?;
+    let (previous_productive, previous_distracting, previous_total) =
+        productive_distracting_total(connection, &prev_range)?;
+
+    Ok(MonthlyReport {
+        year,
+        month,
+        month_name: month_name(month),
+        days_in_month: dim,
+        total_active_seconds: summary.total_active_seconds,
+        daily_average_seconds,
+        most_active_day,
+        longest_session_seconds,
+        unique_apps,
+        unique_websites,
+        by_category: summary.by_category,
+        top_apps: summary.top_apps.into_iter().take(5).collect(),
+        top_domains: summary.top_domains.into_iter().take(5).collect(),
+        by_day: summary.by_day,
+        by_hour: summary.by_hour,
+        comparison: MonthComparison {
+            previous_total_seconds: previous_total,
+            previous_productive_seconds: previous_productive,
+            previous_distracting_seconds: previous_distracting,
+            current_total_seconds: current_total,
+            current_productive_seconds: current_productive,
+            current_distracting_seconds: current_distracting,
+        },
+    })
+}
+
+fn longest_session(connection: &Connection, range: &DateRange) -> rusqlite::Result<i64> {
+    connection.query_row(
+        "
+        SELECT COALESCE(MAX(end_ts - start_ts), 0)
+        FROM events
+        WHERE end_ts > ?1 AND start_ts < ?2
+        ",
+        params![range.start_ts, range.end_ts],
+        |row| row.get(0),
+    )
+}
+
+fn unique_app_count(connection: &Connection, range: &DateRange) -> rusqlite::Result<i64> {
+    connection.query_row(
+        "
+        SELECT COUNT(DISTINCT app_name)
+        FROM events
+        WHERE end_ts > ?1 AND start_ts < ?2
+        ",
+        params![range.start_ts, range.end_ts],
+        |row| row.get(0),
+    )
+}
+
+fn unique_domain_count(connection: &Connection, range: &DateRange) -> rusqlite::Result<i64> {
+    connection.query_row(
+        "
+        SELECT COUNT(DISTINCT domain)
+        FROM events
+        WHERE end_ts > ?1 AND start_ts < ?2
+          AND domain IS NOT NULL AND domain != ''
+        ",
+        params![range.start_ts, range.end_ts],
+        |row| row.get(0),
+    )
+}
+
+fn productive_distracting_total(
+    connection: &Connection,
+    range: &DateRange,
+) -> rusqlite::Result<(i64, i64, i64)> {
+    connection.query_row(
+        "
+        SELECT
+            COALESCE(SUM(CASE WHEN categories.is_productive = 1
+                              THEN MAX(0, MIN(events.end_ts, ?2) - MAX(events.start_ts, ?1))
+                              ELSE 0 END), 0) AS productive,
+            COALESCE(SUM(CASE WHEN categories.is_productive = 0
+                              THEN MAX(0, MIN(events.end_ts, ?2) - MAX(events.start_ts, ?1))
+                              ELSE 0 END), 0) AS distracting,
+            COALESCE(SUM(MAX(0, MIN(events.end_ts, ?2) - MAX(events.start_ts, ?1))), 0) AS total
+        FROM events
+        LEFT JOIN categories ON categories.name = events.category
+        WHERE events.end_ts > ?1 AND events.start_ts < ?2
+        ",
+        params![range.start_ts, range.end_ts],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )
 }

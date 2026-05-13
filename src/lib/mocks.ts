@@ -1,4 +1,19 @@
-import type { Summary, TimelineEvent } from "./api";
+import type { MonthlyReport, Summary, TimelineEvent } from "./api";
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 const CATEGORY_COLORS = {
   Development: "#22c55e",
@@ -93,4 +108,74 @@ export function buildMockTimeline(): TimelineEvent[] {
     });
   }
   return events;
+}
+
+export function buildMockMonthlyReport(year: number, month: number): MonthlyReport {
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const byDay: { date: string; duration_seconds: number }[] = [];
+  let total = 0;
+  let mostActiveIdx = 0;
+  let mostActiveDuration = 0;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(year, month - 1, d);
+    const iso = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+    const base = isWeekend ? 1800 : 6600;
+    const noise = Math.floor(Math.random() * 7000);
+    const duration = Math.random() < 0.05 ? 0 : base + noise;
+    byDay.push({ date: iso, duration_seconds: duration });
+    total += duration;
+    if (duration > mostActiveDuration) {
+      mostActiveDuration = duration;
+      mostActiveIdx = d - 1;
+    }
+  }
+
+  const byHour = Array.from({ length: 24 }, (_, h) => {
+    if (h < 7 || h > 22) return Math.floor(Math.random() * 200);
+    const peak = h >= 9 && h <= 17 ? 3500 : 1500;
+    return Math.floor(peak * (0.5 + Math.random() * 0.5));
+  });
+
+  const prevTotal = Math.floor(total * (0.8 + Math.random() * 0.3));
+  const productive = Math.floor(total * 0.62);
+  const distracting = Math.floor(total * 0.18);
+  const prevProductive = Math.floor(prevTotal * 0.55);
+  const prevDistracting = Math.floor(prevTotal * 0.22);
+
+  return {
+    year,
+    month,
+    month_name: MONTH_NAMES[month - 1] ?? "",
+    days_in_month: daysInMonth,
+    total_active_seconds: total,
+    daily_average_seconds: Math.floor(total / daysInMonth),
+    most_active_day: byDay[mostActiveIdx] ?? null,
+    longest_session_seconds: 2 * 3600 + 47 * 60,
+    unique_apps: 23,
+    unique_websites: 87,
+    by_category: MOCK_SUMMARY.by_category.map((c) => ({
+      ...c,
+      duration_seconds: Math.floor(total * (c.percent / 100)),
+    })),
+    top_apps: MOCK_SUMMARY.top_apps.slice(0, 5).map((a) => ({
+      ...a,
+      duration_seconds: Math.floor(total * (a.percent / 100)),
+    })),
+    top_domains: MOCK_SUMMARY.top_domains.slice(0, 5).map((d) => ({
+      ...d,
+      duration_seconds: Math.floor(total * (d.percent / 100)),
+    })),
+    by_day: byDay,
+    by_hour: byHour,
+    comparison: {
+      previous_total_seconds: prevTotal,
+      previous_productive_seconds: prevProductive,
+      previous_distracting_seconds: prevDistracting,
+      current_total_seconds: total,
+      current_productive_seconds: productive,
+      current_distracting_seconds: distracting,
+    },
+  };
 }

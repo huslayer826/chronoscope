@@ -7,6 +7,8 @@ mod ws;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|_app| {
             let browser_state = ws::server::create_browser_state();
             ws::server::start_server(browser_state);
@@ -16,6 +18,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_summary,
             commands::get_today_timeline,
+            commands::get_monthly_report,
             commands::get_categories,
             commands::get_category_rules,
             commands::add_category_rule,

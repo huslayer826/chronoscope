@@ -79,12 +79,44 @@ export interface Settings {
   launch_at_login: boolean;
 }
 
+export interface MonthlyReport {
+  year: number;
+  month: number;
+  month_name: string;
+  days_in_month: number;
+  total_active_seconds: number;
+  daily_average_seconds: number;
+  most_active_day: DayStat | null;
+  longest_session_seconds: number;
+  unique_apps: number;
+  unique_websites: number;
+  by_category: CategoryStat[];
+  top_apps: AppStat[];
+  top_domains: DomainStat[];
+  by_day: DayStat[];
+  by_hour: number[];
+  comparison: MonthComparison;
+}
+
+export interface MonthComparison {
+  previous_total_seconds: number;
+  previous_productive_seconds: number;
+  previous_distracting_seconds: number;
+  current_total_seconds: number;
+  current_productive_seconds: number;
+  current_distracting_seconds: number;
+}
+
 export function getSummary(range: DateRange): Promise<Summary> {
   return invoke("get_summary", { range });
 }
 
 export function getTodayTimeline(): Promise<TimelineEvent[]> {
   return invoke("get_today_timeline");
+}
+
+export function getMonthlyReport(year: number, month: number): Promise<MonthlyReport> {
+  return invoke("get_monthly_report", { year, month });
 }
 
 export function getCategories(): Promise<Category[]> {
