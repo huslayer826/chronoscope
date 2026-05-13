@@ -1,8 +1,24 @@
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Sidebar } from "./components/Sidebar";
+import { Dashboard } from "./views/Dashboard";
+import { MonthlyReport } from "./views/MonthlyReport";
+import { Settings } from "./views/Settings";
+
 function App() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0a0a0b] text-white">
-      <h1 className="text-5xl font-semibold tracking-normal">ChronoScope</h1>
-    </main>
+    <BrowserRouter>
+      <div className="min-h-screen text-zinc-100">
+        <Sidebar />
+        <main className="ml-60 min-h-screen">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/monthly" element={<MonthlyReport />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 
