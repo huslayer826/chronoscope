@@ -1,6 +1,7 @@
 use crate::db::{insert_event, Event};
+use crate::ws::server::get_active_tab_for_browser;
 
-use super::ActiveWindowInfo;
+use super::{extract_domain, ActiveWindowInfo};
 
 const MIN_SESSION_SECONDS: i64 = 2;
 
@@ -10,6 +11,7 @@ struct CurrentSession {
     executable_path: String,
     window_title: String,
     url: Option<String>,
+    domain: Option<String>,
     start_ts: i64,
     last_seen_ts: i64,
 }
@@ -48,11 +50,16 @@ impl SessionBuilder {
     }
 
     fn start(&mut self, active_window: ActiveWindowInfo) {
+        let browser_tab = get_active_tab_for_browser(&active_window.process_name);
+        let url = browser_tab.and_then(|tab| tab.url);
+        let domain = url.as_deref().and_then(extract_domain);
+
         self.current = Some(CurrentSession {
             app_name: active_window.process_name,
             executable_path: active_window.executable_path,
             window_title: active_window.window_title,
-            url: None,
+            url,
+            domain,
             start_ts: active_window.timestamp,
             last_seen_ts: active_window.timestamp,
         });
@@ -78,7 +85,7 @@ impl SessionBuilder {
             executable_path: Some(current.executable_path),
             window_title: Some(current.window_title),
             url: current.url,
-            domain: None,
+            domain: current.domain,
             category: None,
         };
 
@@ -92,6 +99,6 @@ impl CurrentSession {
     fn matches(&self, active_window: &ActiveWindowInfo) -> bool {
         self.app_name == active_window.process_name
             && self.window_title == active_window.window_title
-            && self.url.is_none()
+            && self.url == get_active_tab_for_browser(&active_window.process_name).and_then(|tab| tab.url)
     }
 }

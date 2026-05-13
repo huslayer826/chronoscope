@@ -1,0 +1,24 @@
+// Minimal embedded public suffix list for offline ChronoScope domain grouping.
+// The publicsuffix crate treats this as a normal PSL payload compiled into the app.
+ac.uk
+au
+ca
+co
+co.jp
+co.uk
+com
+com.au
+com.br
+com.mx
+de
+dev
+edu
+fr
+gov
+io
+jp
+me
+net
+org
+uk
+us
