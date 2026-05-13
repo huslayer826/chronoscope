@@ -77,6 +77,7 @@ export interface Settings {
   idle_threshold_seconds: number;
   include_browser_urls: boolean;
   launch_at_login: boolean;
+  launch_to_tray: boolean;
 }
 
 export interface MonthlyReport {
@@ -141,4 +142,8 @@ export function getSettings(): Promise<Settings> {
 
 export function updateSettings(settings: Settings): Promise<void> {
   return invoke("update_settings", { settings });
+}
+
+export function setAutostart(enabled: boolean): Promise<void> {
+  return invoke("set_autostart", { enabled });
 }

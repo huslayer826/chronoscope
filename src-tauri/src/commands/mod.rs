@@ -1,6 +1,8 @@
 use chrono::{Datelike, Local, Months, NaiveDate, TimeZone};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
+use tauri::AppHandle;
+use tauri_plugin_autostart::ManagerExt;
 
 use crate::db;
 use crate::tracking;
@@ -93,6 +95,7 @@ pub struct Settings {
     pub idle_threshold_seconds: i64,
     pub include_browser_urls: bool,
     pub launch_at_login: bool,
+    pub launch_to_tray: bool,
 }
 
 impl Default for Settings {
@@ -102,6 +105,7 @@ impl Default for Settings {
             idle_threshold_seconds: 60,
             include_browser_urls: true,
             launch_at_login: false,
+            launch_to_tray: true,
         }
     }
 }
@@ -220,6 +224,23 @@ pub async fn update_settings(settings: Settings) -> Result<(), String> {
         )?;
         upsert_setting(connection, "include_browser_urls", settings.include_browser_urls)?;
         upsert_setting(connection, "launch_at_login", settings.launch_at_login)?;
+        upsert_setting(connection, "launch_to_tray", settings.launch_to_tray)?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+pub async fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let autostart = app.autolaunch();
+
+    if enabled {
+        autostart.enable().map_err(|error| error.to_string())?;
+    } else {
+        autostart.disable().map_err(|error| error.to_string())?;
+    }
+
+    with_connection_result(|connection| {
+        upsert_setting(connection, "launch_at_login", enabled)?;
         Ok(())
     })
 }
@@ -505,6 +526,8 @@ fn query_settings(connection: &Connection) -> rusqlite::Result<Settings> {
         .unwrap_or(settings.include_browser_urls);
     settings.launch_at_login =
         get_bool_setting(connection, "launch_at_login")?.unwrap_or(settings.launch_at_login);
+    settings.launch_to_tray =
+        get_bool_setting(connection, "launch_to_tray")?.unwrap_or(settings.launch_to_tray);
 
     Ok(settings)
 }

@@ -5,11 +5,23 @@ mod idle;
 mod session;
 mod session_builder;
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 pub use active_window::{get_active_window, ActiveWindowInfo};
 pub use categorizer::{categorize, reload_rules};
 pub use domain::extract_domain;
 pub use idle::{get_idle_seconds, IDLE_THRESHOLD_SECONDS};
 pub use session::{is_locked, refresh_lock_state};
+
+static TRACKING_PAUSED: AtomicBool = AtomicBool::new(false);
+
+pub fn is_tracking_paused() -> bool {
+    TRACKING_PAUSED.load(Ordering::Relaxed)
+}
+
+pub fn set_tracking_paused(paused: bool) {
+    TRACKING_PAUSED.store(paused, Ordering::Relaxed);
+}
 
 pub fn start_polling_loop() {
     tokio::spawn(async {
@@ -18,6 +30,11 @@ pub fn start_polling_loop() {
 
         loop {
             interval.tick().await;
+
+            if is_tracking_paused() {
+                session_builder.tick(None, true);
+                continue;
+            }
 
             let idle_seconds = get_idle_seconds();
             let locked = refresh_lock_state();

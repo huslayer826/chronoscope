@@ -152,7 +152,8 @@ fn initialize_schema(connection: &Connection) -> rusqlite::Result<()> {
           ('tracking_enabled', 'true'),
           ('idle_threshold_seconds', '60'),
           ('include_browser_urls', 'true'),
-          ('launch_at_login', 'false');
+          ('launch_at_login', 'false'),
+          ('launch_to_tray', 'true');
 
         INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
         SELECT 'app', 'code.exe', id, 100 FROM categories WHERE name = 'Development';

@@ -17,9 +17,16 @@
         "height": 800,
         "minWidth": 1000,
         "minHeight": 700,
-        "backgroundColor": "#0a0a0b"
+        "backgroundColor": "#0a0a0b",
+        "visible": false
       }
     ],
+    "trayIcon": {
+      "id": "main",
+      "iconPath": "icons/32x32.png",
+      "tooltip": "ChronoScope - Tracking active",
+      "showMenuOnLeftClick": false
+    },
     "security": {
       "csp": null
     }
