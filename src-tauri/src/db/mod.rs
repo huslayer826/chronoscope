@@ -133,6 +133,11 @@ fn initialize_schema(connection: &Connection) -> rusqlite::Result<()> {
         CREATE UNIQUE INDEX IF NOT EXISTS idx_category_rules_unique
         ON category_rules(match_type, pattern, category_id);
 
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+
         INSERT OR IGNORE INTO categories (name, color, is_productive) VALUES
           ('Development', '#22c55e', 1),
           ('Productivity', '#3b82f6', 1),
@@ -142,6 +147,12 @@ fn initialize_schema(connection: &Connection) -> rusqlite::Result<()> {
           ('News & Reading', '#eab308', 0),
           ('Shopping', '#ec4899', -1),
           ('Other', '#64748b', 0);
+
+        INSERT OR IGNORE INTO settings (key, value) VALUES
+          ('tracking_enabled', 'true'),
+          ('idle_threshold_seconds', '60'),
+          ('include_browser_urls', 'true'),
+          ('launch_at_login', 'false');
 
         INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
         SELECT 'app', 'code.exe', id, 100 FROM categories WHERE name = 'Development';

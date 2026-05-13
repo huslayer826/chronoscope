@@ -1,3 +1,4 @@
+mod commands;
 mod db;
 mod tracking;
 mod ws;
@@ -12,6 +13,16 @@ pub fn run() {
             tracking::start_polling_loop();
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![
+            commands::get_summary,
+            commands::get_today_timeline,
+            commands::get_categories,
+            commands::get_category_rules,
+            commands::add_category_rule,
+            commands::delete_category_rule,
+            commands::get_settings,
+            commands::update_settings,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
