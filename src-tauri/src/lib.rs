@@ -41,6 +41,21 @@ pub fn run() {
             commands::get_settings,
             commands::update_settings,
             commands::set_autostart,
+            commands::add_category,
+            commands::update_category,
+            commands::delete_category,
+            commands::bulk_add_category_rules,
+            commands::get_ignored_apps,
+            commands::add_ignored_app,
+            commands::remove_ignored_app,
+            commands::get_ignored_domains,
+            commands::add_ignored_domain,
+            commands::remove_ignored_domain,
+            commands::export_data_json,
+            commands::export_data_csv,
+            commands::delete_all_data,
+            commands::get_database_path,
+            commands::open_database_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

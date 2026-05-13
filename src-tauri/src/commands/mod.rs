@@ -245,6 +245,274 @@ pub async fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> 
     })
 }
 
+#[tauri::command]
+pub async fn add_category(
+    name: String,
+    color: String,
+    is_productive: i64,
+) -> Result<i64, String> {
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err("name cannot be empty".to_string());
+    }
+    let color = color.trim().to_string();
+    if color.is_empty() {
+        return Err("color cannot be empty".to_string());
+    }
+
+    with_connection_result(|connection| {
+        connection.execute(
+            "INSERT INTO categories (name, color, is_productive) VALUES (?1, ?2, ?3)",
+            params![name, color, is_productive],
+        )?;
+        Ok(connection.last_insert_rowid())
+    })
+}
+
+#[tauri::command]
+pub async fn update_category(
+    id: i64,
+    name: String,
+    color: String,
+    is_productive: i64,
+) -> Result<(), String> {
+    let name = name.trim().to_string();
+    if name.is_empty() {
+        return Err("name cannot be empty".to_string());
+    }
+
+    with_connection_result(|connection| {
+        connection.execute(
+            "UPDATE categories SET name = ?2, color = ?3, is_productive = ?4 WHERE id = ?1",
+            params![id, name, color, is_productive],
+        )?;
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::RulesChanged);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_category(id: i64) -> Result<(), String> {
+    with_connection_result(|connection| {
+        connection.execute(
+            "DELETE FROM category_rules WHERE category_id = ?1",
+            params![id],
+        )?;
+        connection.execute("DELETE FROM categories WHERE id = ?1", params![id])?;
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::RulesChanged);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn bulk_add_category_rules(rules: Vec<NewCategoryRule>) -> Result<i64, String> {
+    let mut added = 0i64;
+
+    with_connection_result(|connection| {
+        for rule in &rules {
+            if !matches!(rule.match_type.as_str(), "app" | "domain") {
+                continue;
+            }
+
+            let pattern = rule.pattern.trim().to_ascii_lowercase();
+            if pattern.is_empty() {
+                continue;
+            }
+
+            let priority = rule.priority.unwrap_or(100);
+            let inserted = connection.execute(
+                "INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+                 VALUES (?1, ?2, ?3, ?4)",
+                params![rule.match_type, pattern, rule.category_id, priority],
+            )?;
+            if inserted > 0 {
+                added += 1;
+            }
+        }
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::RulesChanged);
+    Ok(added)
+}
+
+#[tauri::command]
+pub async fn get_ignored_apps() -> Vec<String> {
+    with_connection(|connection| {
+        let mut statement =
+            connection.prepare("SELECT app_name FROM ignored_apps ORDER BY app_name ASC")?;
+        collect_rows(statement.query_map([], |row| row.get::<_, String>(0))?)
+    })
+    .unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn add_ignored_app(name: String) -> Result<(), String> {
+    let name = name.trim().to_ascii_lowercase();
+    if name.is_empty() {
+        return Err("name cannot be empty".to_string());
+    }
+
+    with_connection_result(|connection| {
+        connection.execute(
+            "INSERT OR IGNORE INTO ignored_apps (app_name) VALUES (?1)",
+            params![name],
+        )?;
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::IgnoreListsChanged);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_ignored_app(name: String) -> Result<(), String> {
+    let name = name.trim().to_ascii_lowercase();
+
+    with_connection_result(|connection| {
+        connection.execute(
+            "DELETE FROM ignored_apps WHERE app_name = ?1",
+            params![name],
+        )?;
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::IgnoreListsChanged);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_ignored_domains() -> Vec<String> {
+    with_connection(|connection| {
+        let mut statement =
+            connection.prepare("SELECT domain FROM ignored_domains ORDER BY domain ASC")?;
+        collect_rows(statement.query_map([], |row| row.get::<_, String>(0))?)
+    })
+    .unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn add_ignored_domain(domain: String) -> Result<(), String> {
+    let domain = domain.trim().to_ascii_lowercase();
+    if domain.is_empty() {
+        return Err("domain cannot be empty".to_string());
+    }
+
+    with_connection_result(|connection| {
+        connection.execute(
+            "INSERT OR IGNORE INTO ignored_domains (domain) VALUES (?1)",
+            params![domain],
+        )?;
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::IgnoreListsChanged);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_ignored_domain(domain: String) -> Result<(), String> {
+    let domain = domain.trim().to_ascii_lowercase();
+
+    with_connection_result(|connection| {
+        connection.execute(
+            "DELETE FROM ignored_domains WHERE domain = ?1",
+            params![domain],
+        )?;
+        Ok(())
+    })?;
+
+    tracking::notify(tracking::TrackingNotification::IgnoreListsChanged);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn export_data_json(path: String) -> Result<i64, String> {
+    let events = with_connection_result(query_all_events)?;
+    let count = events.len() as i64;
+    let json = serde_json::to_string_pretty(&events).map_err(|error| error.to_string())?;
+    std::fs::write(&path, json).map_err(|error| error.to_string())?;
+    Ok(count)
+}
+
+#[tauri::command]
+pub async fn export_data_csv(path: String) -> Result<i64, String> {
+    let events = with_connection_result(query_all_events)?;
+    let mut output = String::new();
+    output.push_str(
+        "id,start_ts,end_ts,duration_sec,app_name,app_display_name,executable_path,window_title,url,domain,category\n",
+    );
+    for event in &events {
+        output.push_str(&format!(
+            "{},{},{},{},{},{},{},{},{},{},{}\n",
+            event.id,
+            event.start_ts,
+            event.end_ts,
+            event.duration_sec,
+            csv_field(&event.app_name),
+            csv_optional(event.app_display_name.as_deref()),
+            csv_optional(event.executable_path.as_deref()),
+            csv_optional(event.window_title.as_deref()),
+            csv_optional(event.url.as_deref()),
+            csv_optional(event.domain.as_deref()),
+            csv_optional(event.category.as_deref()),
+        ));
+    }
+    std::fs::write(&path, output).map_err(|error| error.to_string())?;
+    Ok(events.len() as i64)
+}
+
+#[tauri::command]
+pub async fn delete_all_data() -> Result<(), String> {
+    with_connection_result(|connection| {
+        connection.execute("DELETE FROM events", [])?;
+        Ok(())
+    })
+}
+
+#[tauri::command]
+pub async fn get_database_path() -> Result<String, String> {
+    db::database_path()
+        .map(|path| path.to_string_lossy().into_owned())
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub async fn open_database_folder() -> Result<(), String> {
+    let path = db::database_path().map_err(|error| error.to_string())?;
+    let folder = path
+        .parent()
+        .ok_or_else(|| "could not resolve data folder".to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(folder)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(folder)
+            .spawn()
+            .map_err(|error| error.to_string())?;
+        Ok(())
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        let _ = folder;
+        Err("not supported on this platform".to_string())
+    }
+}
+
 impl Summary {
     fn empty() -> Self {
         Self {
@@ -774,7 +1042,7 @@ fn productive_distracting_total(
             COALESCE(SUM(CASE WHEN categories.is_productive = 1
                               THEN MAX(0, MIN(events.end_ts, ?2) - MAX(events.start_ts, ?1))
                               ELSE 0 END), 0) AS productive,
-            COALESCE(SUM(CASE WHEN categories.is_productive = 0
+            COALESCE(SUM(CASE WHEN categories.is_productive = -1
                               THEN MAX(0, MIN(events.end_ts, ?2) - MAX(events.start_ts, ?1))
                               ELSE 0 END), 0) AS distracting,
             COALESCE(SUM(MAX(0, MIN(events.end_ts, ?2) - MAX(events.start_ts, ?1))), 0) AS total
@@ -785,4 +1053,64 @@ fn productive_distracting_total(
         params![range.start_ts, range.end_ts],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ExportEvent {
+    id: i64,
+    start_ts: i64,
+    end_ts: i64,
+    duration_sec: i64,
+    app_name: String,
+    app_display_name: Option<String>,
+    executable_path: Option<String>,
+    window_title: Option<String>,
+    url: Option<String>,
+    domain: Option<String>,
+    category: Option<String>,
+}
+
+fn query_all_events(connection: &Connection) -> rusqlite::Result<Vec<ExportEvent>> {
+    let mut statement = connection.prepare(
+        "
+        SELECT id, start_ts, end_ts, duration_sec, app_name, app_display_name,
+               executable_path, window_title, url, domain, category
+        FROM events
+        ORDER BY start_ts ASC
+        ",
+    )?;
+
+    collect_rows(statement.query_map([], |row| {
+        Ok(ExportEvent {
+            id: row.get(0)?,
+            start_ts: row.get(1)?,
+            end_ts: row.get(2)?,
+            duration_sec: row.get(3)?,
+            app_name: row.get(4)?,
+            app_display_name: row.get(5)?,
+            executable_path: row.get(6)?,
+            window_title: row.get(7)?,
+            url: row.get(8)?,
+            domain: row.get(9)?,
+            category: row.get(10)?,
+        })
+    })?)
+}
+
+fn csv_field(value: &str) -> String {
+    if value
+        .chars()
+        .any(|c| c == ',' || c == '"' || c == '\n' || c == '\r')
+    {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_string()
+    }
+}
+
+fn csv_optional(value: Option<&str>) -> String {
+    match value {
+        Some(value) => csv_field(value),
+        None => String::new(),
+    }
 }

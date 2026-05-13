@@ -147,3 +147,72 @@ export function updateSettings(settings: Settings): Promise<void> {
 export function setAutostart(enabled: boolean): Promise<void> {
   return invoke("set_autostart", { enabled });
 }
+
+export function addCategory(
+  name: string,
+  color: string,
+  isProductive: number,
+): Promise<number> {
+  return invoke("add_category", { name, color, isProductive });
+}
+
+export function updateCategory(
+  id: number,
+  name: string,
+  color: string,
+  isProductive: number,
+): Promise<void> {
+  return invoke("update_category", { id, name, color, isProductive });
+}
+
+export function deleteCategory(id: number): Promise<void> {
+  return invoke("delete_category", { id });
+}
+
+export function bulkAddCategoryRules(rules: NewCategoryRule[]): Promise<number> {
+  return invoke("bulk_add_category_rules", { rules });
+}
+
+export function getIgnoredApps(): Promise<string[]> {
+  return invoke("get_ignored_apps");
+}
+
+export function addIgnoredApp(name: string): Promise<void> {
+  return invoke("add_ignored_app", { name });
+}
+
+export function removeIgnoredApp(name: string): Promise<void> {
+  return invoke("remove_ignored_app", { name });
+}
+
+export function getIgnoredDomains(): Promise<string[]> {
+  return invoke("get_ignored_domains");
+}
+
+export function addIgnoredDomain(domain: string): Promise<void> {
+  return invoke("add_ignored_domain", { domain });
+}
+
+export function removeIgnoredDomain(domain: string): Promise<void> {
+  return invoke("remove_ignored_domain", { domain });
+}
+
+export function exportDataJson(path: string): Promise<number> {
+  return invoke("export_data_json", { path });
+}
+
+export function exportDataCsv(path: string): Promise<number> {
+  return invoke("export_data_csv", { path });
+}
+
+export function deleteAllData(): Promise<void> {
+  return invoke("delete_all_data");
+}
+
+export function getDatabasePath(): Promise<string> {
+  return invoke("get_database_path");
+}
+
+export function openDatabaseFolder(): Promise<void> {
+  return invoke("open_database_folder");
+}

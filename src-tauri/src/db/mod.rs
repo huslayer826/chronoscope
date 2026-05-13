@@ -88,7 +88,7 @@ fn open_database() -> Result<Connection, Box<dyn Error + Send + Sync>> {
     Ok(connection)
 }
 
-fn database_path() -> Result<PathBuf, Box<dyn Error + Send + Sync>> {
+pub fn database_path() -> Result<PathBuf, Box<dyn Error + Send + Sync>> {
     let data_dir = dirs::data_dir().ok_or_else(|| {
         io::Error::new(io::ErrorKind::NotFound, "could not resolve data directory")
     })?;
@@ -136,6 +136,14 @@ fn initialize_schema(connection: &Connection) -> rusqlite::Result<()> {
         CREATE TABLE IF NOT EXISTS settings (
           key TEXT PRIMARY KEY,
           value TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS ignored_apps (
+          app_name TEXT PRIMARY KEY
+        );
+
+        CREATE TABLE IF NOT EXISTS ignored_domains (
+          domain TEXT PRIMARY KEY
         );
 
         INSERT OR IGNORE INTO categories (name, color, is_productive) VALUES

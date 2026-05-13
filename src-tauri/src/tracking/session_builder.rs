@@ -1,7 +1,9 @@
 use crate::db::{insert_event, Event};
 use crate::ws::server::get_active_tab_for_browser;
 
-use super::{categorize, extract_domain, ActiveWindowInfo};
+use super::{
+    categorize, extract_domain, is_app_ignored, is_domain_ignored, ActiveWindowInfo,
+};
 
 const MIN_SESSION_SECONDS: i64 = 2;
 
@@ -36,6 +38,22 @@ impl SessionBuilder {
             self.flush();
             return;
         };
+
+        if is_app_ignored(&active_window.process_name) {
+            self.flush();
+            return;
+        }
+
+        if let Some(tab) = get_active_tab_for_browser(&active_window.process_name) {
+            if let Some(url) = tab.url.as_deref() {
+                if let Some(domain) = extract_domain(url) {
+                    if is_domain_ignored(&domain) {
+                        self.flush();
+                        return;
+                    }
+                }
+            }
+        }
 
         match self.current.as_mut() {
             Some(current) if current.matches(&active_window) => {
