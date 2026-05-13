@@ -1,10 +1,12 @@
 mod active_window;
+mod categorizer;
 mod domain;
 mod idle;
 mod session;
 mod session_builder;
 
 pub use active_window::{get_active_window, ActiveWindowInfo};
+pub use categorizer::{categorize, reload_rules};
 pub use domain::extract_domain;
 pub use idle::{get_idle_seconds, IDLE_THRESHOLD_SECONDS};
 pub use session::{is_locked, refresh_lock_state};

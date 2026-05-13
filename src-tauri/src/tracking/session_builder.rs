@@ -1,7 +1,7 @@
 use crate::db::{insert_event, Event};
 use crate::ws::server::get_active_tab_for_browser;
 
-use super::{extract_domain, ActiveWindowInfo};
+use super::{categorize, extract_domain, ActiveWindowInfo};
 
 const MIN_SESSION_SECONDS: i64 = 2;
 
@@ -76,6 +76,8 @@ impl SessionBuilder {
             return;
         }
 
+        let category = categorize(&current.app_name, current.domain.as_deref());
+
         let event = Event {
             start_ts: current.start_ts,
             end_ts: current.last_seen_ts,
@@ -86,7 +88,7 @@ impl SessionBuilder {
             window_title: Some(current.window_title),
             url: current.url,
             domain: current.domain,
-            category: None,
+            category,
         };
 
         if insert_event(&event) {

@@ -114,6 +114,117 @@ fn initialize_schema(connection: &Connection) -> rusqlite::Result<()> {
 
         CREATE INDEX IF NOT EXISTS idx_events_start ON events(start_ts);
         CREATE INDEX IF NOT EXISTS idx_events_domain ON events(domain);
+
+        CREATE TABLE IF NOT EXISTS categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          color TEXT NOT NULL,
+          is_productive INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS category_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          match_type TEXT NOT NULL CHECK(match_type IN ('app','domain')),
+          pattern TEXT NOT NULL,
+          category_id INTEGER NOT NULL REFERENCES categories(id),
+          priority INTEGER NOT NULL DEFAULT 100
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_category_rules_unique
+        ON category_rules(match_type, pattern, category_id);
+
+        INSERT OR IGNORE INTO categories (name, color, is_productive) VALUES
+          ('Development', '#22c55e', 1),
+          ('Productivity', '#3b82f6', 1),
+          ('Communication', '#8b5cf6', 0),
+          ('Social Media', '#f43f5e', -1),
+          ('Entertainment', '#f97316', -1),
+          ('News & Reading', '#eab308', 0),
+          ('Shopping', '#ec4899', -1),
+          ('Other', '#64748b', 0);
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'code.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'devenv.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'idea64.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'pycharm64.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'terminal.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'wt.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'cmd.exe', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'powershell.exe', id, 100 FROM categories WHERE name = 'Development';
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'notion.exe', id, 100 FROM categories WHERE name = 'Productivity';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'obsidian.exe', id, 100 FROM categories WHERE name = 'Productivity';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'excel.exe', id, 100 FROM categories WHERE name = 'Productivity';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'word.exe', id, 100 FROM categories WHERE name = 'Productivity';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'winword.exe', id, 100 FROM categories WHERE name = 'Productivity';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'powerpnt.exe', id, 100 FROM categories WHERE name = 'Productivity';
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'slack.exe', id, 100 FROM categories WHERE name = 'Communication';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'discord.exe', id, 100 FROM categories WHERE name = 'Communication';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'teams.exe', id, 100 FROM categories WHERE name = 'Communication';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'zoom.exe', id, 100 FROM categories WHERE name = 'Communication';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'app', 'telegram.exe', id, 100 FROM categories WHERE name = 'Communication';
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'youtube.com', id, 100 FROM categories WHERE name = 'Entertainment';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'netflix.com', id, 100 FROM categories WHERE name = 'Entertainment';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'twitch.tv', id, 100 FROM categories WHERE name = 'Entertainment';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'hulu.com', id, 100 FROM categories WHERE name = 'Entertainment';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'disneyplus.com', id, 100 FROM categories WHERE name = 'Entertainment';
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'twitter.com', id, 100 FROM categories WHERE name = 'Social Media';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'x.com', id, 100 FROM categories WHERE name = 'Social Media';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'instagram.com', id, 100 FROM categories WHERE name = 'Social Media';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'facebook.com', id, 100 FROM categories WHERE name = 'Social Media';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'tiktok.com', id, 100 FROM categories WHERE name = 'Social Media';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'reddit.com', id, 100 FROM categories WHERE name = 'Social Media';
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'github.com', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'gitlab.com', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'stackoverflow.com', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'docs.python.org', id, 100 FROM categories WHERE name = 'Development';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'developer.mozilla.org', id, 100 FROM categories WHERE name = 'Development';
+
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'amazon.com', id, 100 FROM categories WHERE name = 'Shopping';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'ebay.com', id, 100 FROM categories WHERE name = 'Shopping';
+        INSERT OR IGNORE INTO category_rules (match_type, pattern, category_id, priority)
+        SELECT 'domain', 'etsy.com', id, 100 FROM categories WHERE name = 'Shopping';
         ",
     )
 }
